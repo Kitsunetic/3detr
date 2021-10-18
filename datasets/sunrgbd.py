@@ -37,8 +37,8 @@ from utils.box_util import (
 
 
 MEAN_COLOR_RGB = np.array([0.5, 0.5, 0.5])  # sunrgbd color is in 0~1
-DATA_PATH_V1 = "" ## Replace with path to dataset
-DATA_PATH_V2 = "" ## Not used in the codebase.
+DATA_PATH_V1 = ""  ## Replace with path to dataset
+DATA_PATH_V2 = ""  ## Not used in the codebase.
 
 
 class SunrgbdDatasetConfig(object):
@@ -87,9 +87,7 @@ class SunrgbdDatasetConfig(object):
         angle_per_class = 2 * np.pi / float(num_class)
         shifted_angle = (angle + angle_per_class / 2) % (2 * np.pi)
         class_id = int(shifted_angle / angle_per_class)
-        residual_angle = shifted_angle - (
-            class_id * angle_per_class + angle_per_class / 2
-        )
+        residual_angle = shifted_angle - (class_id * angle_per_class + angle_per_class / 2)
         return class_id, residual_angle
 
     def class2angle(self, pred_cls, residual, to_label_format=True):
@@ -163,20 +161,14 @@ class SunrgbdDetectionDataset(Dataset):
         self.data_path = root_dir + "_%s" % (split_set)
 
         if split_set in ["train", "val"]:
-            self.scan_names = sorted(
-                list(
-                    set([os.path.basename(x)[0:6] for x in os.listdir(self.data_path)])
-                )
-            )
+            self.scan_names = sorted(list(set([os.path.basename(x)[0:6] for x in os.listdir(self.data_path)])))
         elif split_set in ["trainval"]:
             # combine names from both
             sub_splits = ["train", "val"]
             all_paths = []
             for sub_split in sub_splits:
                 data_path = self.data_path.replace("trainval", sub_split)
-                basenames = sorted(
-                    list(set([os.path.basename(x)[0:6] for x in os.listdir(data_path)]))
-                )
+                basenames = sorted(list(set([os.path.basename(x)[0:6] for x in os.listdir(data_path)])))
                 basenames = [os.path.join(data_path, x) for x in basenames]
                 all_paths.extend(basenames)
             all_paths.sort()
@@ -221,9 +213,7 @@ class SunrgbdDetectionDataset(Dataset):
         if self.use_height:
             floor_height = np.percentile(point_cloud[:, 2], 0.99)
             height = point_cloud[:, 2] - floor_height
-            point_cloud = np.concatenate(
-                [point_cloud, np.expand_dims(height, 1)], 1
-            )  # (N,4) or (N,7)
+            point_cloud = np.concatenate([point_cloud, np.expand_dims(height, 1)], 1)  # (N,4) or (N,7)
 
         # ------------------------------- DATA AUGMENTATION ------------------------------
         if self.augment:
@@ -244,20 +234,14 @@ class SunrgbdDetectionDataset(Dataset):
             # Augment RGB color
             if self.use_color:
                 rgb_color = point_cloud[:, 3:6] + MEAN_COLOR_RGB
-                rgb_color *= (
-                    1 + 0.4 * np.random.random(3) - 0.2
-                )  # brightness change for each channel
-                rgb_color += (
-                    0.1 * np.random.random(3) - 0.05
-                )  # color shift for each channel
+                rgb_color *= 1 + 0.4 * np.random.random(3) - 0.2  # brightness change for each channel
+                rgb_color += 0.1 * np.random.random(3) - 0.05  # color shift for each channel
                 rgb_color += np.expand_dims(
                     (0.05 * np.random.random(point_cloud.shape[0]) - 0.025), -1
                 )  # jittering on each pixel
                 rgb_color = np.clip(rgb_color, 0, 1)
                 # randomly drop out 30% of the points' colors
-                rgb_color *= np.expand_dims(
-                    np.random.random(point_cloud.shape[0]) > 0.3, -1
-                )
+                rgb_color *= np.expand_dims(np.random.random(point_cloud.shape[0]) > 0.3, -1)
                 point_cloud[:, 3:6] = rgb_color - MEAN_COLOR_RGB
 
             # Augment point cloud scale: 0.85x-1.15x
@@ -271,9 +255,7 @@ class SunrgbdDetectionDataset(Dataset):
                 point_cloud[:, -1] *= scale_ratio[0, 0]
 
             if self.use_random_cuboid:
-                point_cloud, bboxes, _ = self.random_cuboid_augmentor(
-                    point_cloud, bboxes
-                )
+                point_cloud, bboxes, _ = self.random_cuboid_augmentor(point_cloud, bboxes)
 
         # ------------------------------- LABELS ------------------------------
         angle_classes = np.zeros((self.max_num_obj,), dtype=np.float32)
@@ -297,9 +279,7 @@ class SunrgbdDetectionDataset(Dataset):
             angle_class, angle_residual = self.dataset_config.angle2class(bbox[6])
             angle_classes[i] = angle_class
             angle_residuals[i] = angle_residual
-            corners_3d = self.dataset_config.my_compute_box_3d(
-                bbox[0:3], bbox[3:6], bbox[6]
-            )
+            corners_3d = self.dataset_config.my_compute_box_3d(bbox[0:3], bbox[3:6], bbox[6])
             # compute axis aligned box
             xmin = np.min(corners_3d[:, 0])
             ymin = np.min(corners_3d[:, 1])
@@ -319,9 +299,7 @@ class SunrgbdDetectionDataset(Dataset):
             )
             target_bboxes[i, :] = target_bbox
 
-        point_cloud, choices = pc_util.random_sampling(
-            point_cloud, self.num_points, return_choices=True
-        )
+        point_cloud, choices = pc_util.random_sampling(point_cloud, self.num_points, return_choices=True)
 
         point_cloud_dims_min = point_cloud.min(axis=0)
         point_cloud_dims_max = point_cloud.max(axis=0)
@@ -348,9 +326,7 @@ class SunrgbdDetectionDataset(Dataset):
         # re-encode angles to be consistent with VoteNet eval
         angle_classes = angle_classes.astype(np.int64)
         angle_residuals = angle_residuals.astype(np.float32)
-        raw_angles = self.dataset_config.class2angle_batch(
-            angle_classes, angle_residuals
-        )
+        raw_angles = self.dataset_config.class2angle_batch(angle_classes, angle_residuals)
 
         box_corners = self.dataset_config.box_parametrization_to_corners_np(
             box_centers[None, ...],
@@ -363,9 +339,7 @@ class SunrgbdDetectionDataset(Dataset):
         ret_dict["point_clouds"] = point_cloud.astype(np.float32)
         ret_dict["gt_box_corners"] = box_corners.astype(np.float32)
         ret_dict["gt_box_centers"] = box_centers.astype(np.float32)
-        ret_dict["gt_box_centers_normalized"] = box_centers_normalized.astype(
-            np.float32
-        )
+        ret_dict["gt_box_centers_normalized"] = box_centers_normalized.astype(np.float32)
         target_bboxes_semcls = np.zeros((self.max_num_obj))
         target_bboxes_semcls[0 : bboxes.shape[0]] = bboxes[:, -1]  # from 0 to 9
         ret_dict["gt_box_sem_cls_label"] = target_bboxes_semcls.astype(np.int64)

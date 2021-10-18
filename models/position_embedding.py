@@ -54,9 +54,7 @@ class PositionEmbeddingCoordsSine(nn.Module):
         # automatically handle remainder by assiging it to the first dim
         rems = num_channels - (ndim * xyz.shape[2])
 
-        assert (
-            ndim % 2 == 0
-        ), f"Cannot handle odd sized ndim={ndim} where num_channels={num_channels} and xyz={xyz.shape}"
+        assert ndim % 2 == 0, f"Cannot handle odd sized ndim={ndim} where num_channels={num_channels} and xyz={xyz.shape}"
 
         final_embeds = []
         prev_dim = 0
@@ -77,9 +75,7 @@ class PositionEmbeddingCoordsSine(nn.Module):
             if self.scale:
                 raw_pos *= self.scale
             pos = raw_pos[:, :, None] / dim_t
-            pos = torch.stack(
-                (pos[:, :, 0::2].sin(), pos[:, :, 1::2].cos()), dim=3
-            ).flatten(2)
+            pos = torch.stack((pos[:, :, 0::2].sin(), pos[:, :, 1::2].cos()), dim=3).flatten(2)
             final_embeds.append(pos)
             prev_dim = cdim
 
@@ -108,9 +104,7 @@ class PositionEmbeddingCoordsSine(nn.Module):
             xyz = shift_scale_points(xyz, src_range=input_range)
 
         xyz *= 2 * np.pi
-        xyz_proj = torch.mm(xyz.view(-1, d_in), self.gauss_B[:, :d_out]).view(
-            bsize, npoints, d_out
-        )
+        xyz_proj = torch.mm(xyz.view(-1, d_in), self.gauss_B[:, :d_out]).view(bsize, npoints, d_out)
         final_embeds = [xyz_proj.sin(), xyz_proj.cos()]
 
         # return batch x d_pos x npoints embedding
@@ -133,7 +127,5 @@ class PositionEmbeddingCoordsSine(nn.Module):
     def extra_repr(self):
         st = f"type={self.pos_type}, scale={self.scale}, normalize={self.normalize}"
         if hasattr(self, "gauss_B"):
-            st += (
-                f", gaussB={self.gauss_B.shape}, gaussBsum={self.gauss_B.sum().item()}"
-            )
+            st += f", gaussB={self.gauss_B.shape}, gaussBsum={self.gauss_B.sum().item()}"
         return st

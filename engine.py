@@ -1,38 +1,32 @@
 # Copyright (c) Facebook, Inc. and its affiliates.
-import torch
 import datetime
 import logging
 import math
-import time
 import sys
+import time
 
+import torch
 from torch.distributed.distributed_c10d import reduce
+
 from utils.ap_calculator import APCalculator
-from utils.misc import SmoothedValue
 from utils.dist import (
     all_gather_dict,
     all_reduce_average,
+    barrier,
     is_primary,
     reduce_dict,
-    barrier,
 )
+from utils.misc import SmoothedValue
 
 
 def compute_learning_rate(args, curr_epoch_normalized):
     assert curr_epoch_normalized <= 1.0 and curr_epoch_normalized >= 0.0
-    if (
-        curr_epoch_normalized <= (args.warm_lr_epochs / args.max_epoch)
-        and args.warm_lr_epochs > 0
-    ):
+    if curr_epoch_normalized <= (args.warm_lr_epochs / args.max_epoch) and args.warm_lr_epochs > 0:
         # Linear Warmup
-        curr_lr = args.warm_lr + curr_epoch_normalized * args.max_epoch * (
-            (args.base_lr - args.warm_lr) / args.warm_lr_epochs
-        )
+        curr_lr = args.warm_lr + curr_epoch_normalized * args.max_epoch * ((args.base_lr - args.warm_lr) / args.warm_lr_epochs)
     else:
         # Cosine Learning Rate Schedule
-        curr_lr = args.final_lr + 0.5 * (args.base_lr - args.final_lr) * (
-            1 + math.cos(math.pi * curr_epoch_normalized)
-        )
+        curr_lr = args.final_lr + 0.5 * (args.base_lr - args.final_lr) * (1 + math.cos(math.pi * curr_epoch_normalized))
     return curr_lr
 
 
@@ -119,7 +113,13 @@ def train_one_epoch(
             eta_seconds = (max_iters - curr_iter) * time_delta.avg
             eta_str = str(datetime.timedelta(seconds=int(eta_seconds)))
             print(
-                f"Epoch [{curr_epoch}/{args.max_epoch}]; Iter [{curr_iter}/{max_iters}]; Loss {loss_avg.avg:0.2f}; LR {curr_lr:0.2e}; Iter time {time_delta.avg:0.2f}; ETA {eta_str}; Mem {mem_mb:0.2f}MB"
+                f"Epoch [{curr_epoch}/{args.max_epoch}];",
+                f"Iter [{curr_iter}/{max_iters}];",
+                f"Loss {loss_avg.avg:0.2f};",
+                f"LR {curr_lr:0.2e};",
+                f"Iter time {time_delta.avg:0.2f};",
+                f"ETA {eta_str};",
+                f"Mem {mem_mb:0.2f}MB",
             )
             logger.log_scalars(loss_dict_reduced, curr_iter, prefix="Train_details/")
 
@@ -208,9 +208,7 @@ def evaluate(
         barrier()
     if is_primary():
         if criterion is not None:
-            logger.log_scalars(
-                loss_dict_reduced, curr_train_iter, prefix="Test_details/"
-            )
+            logger.log_scalars(loss_dict_reduced, curr_train_iter, prefix="Test_details/")
         logger.log_scalars(test_dict, curr_train_iter, prefix="Test/")
 
     return ap_calculator

@@ -13,15 +13,14 @@ import numpy as np
 import torch
 import utils.pc_util as pc_util
 from torch.utils.data import Dataset
-from utils.box_util import (flip_axis_to_camera_np, flip_axis_to_camera_tensor,
-                            get_3d_box_batch_np, get_3d_box_batch_tensor)
+from utils.box_util import flip_axis_to_camera_np, flip_axis_to_camera_tensor, get_3d_box_batch_np, get_3d_box_batch_tensor
 from utils.pc_util import scale_points, shift_scale_points
 from utils.random_cuboid import RandomCuboid
 
 IGNORE_LABEL = -100
 MEAN_COLOR_RGB = np.array([109.8, 97.2, 83.8])
 DATASET_ROOT_DIR = ""  ## Replace with path to dataset
-DATASET_METADATA_DIR = "" ## Replace with path to dataset
+DATASET_METADATA_DIR = ""  ## Replace with path to dataset
 
 
 class ScannetDatasetConfig(object):
@@ -51,12 +50,8 @@ class ScannetDatasetConfig(object):
             "garbagebin": 17,
         }
         self.class2type = {self.type2class[t]: t for t in self.type2class}
-        self.nyu40ids = np.array(
-            [3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 14, 16, 24, 28, 33, 34, 36, 39]
-        )
-        self.nyu40id2class = {
-            nyu40id: i for i, nyu40id in enumerate(list(self.nyu40ids))
-        }
+        self.nyu40ids = np.array([3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 14, 16, 24, 28, 33, 34, 36, 39])
+        self.nyu40id2class = {nyu40id: i for i, nyu40id in enumerate(list(self.nyu40ids))}
 
         # Semantic Segmentation Classes. Not used in 3DETR
         self.num_class_semseg = 20
@@ -82,15 +77,9 @@ class ScannetDatasetConfig(object):
             "bathtub": 18,
             "garbagebin": 19,
         }
-        self.class2type_semseg = {
-            self.type2class_semseg[t]: t for t in self.type2class_semseg
-        }
-        self.nyu40ids_semseg = np.array(
-            [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 14, 16, 24, 28, 33, 34, 36, 39]
-        )
-        self.nyu40id2class_semseg = {
-            nyu40id: i for i, nyu40id in enumerate(list(self.nyu40ids_semseg))
-        }
+        self.class2type_semseg = {self.type2class_semseg[t]: t for t in self.type2class_semseg}
+        self.nyu40ids_semseg = np.array([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 14, 16, 24, 28, 33, 34, 36, 39])
+        self.nyu40id2class_semseg = {nyu40id: i for i, nyu40id in enumerate(list(self.nyu40ids_semseg))}
 
     def angle2class(self, angle):
         raise ValueError("ScanNet does not have rotated bounding boxes.")
@@ -183,15 +172,7 @@ class ScannetDetectionDataset(Dataset):
             meta_data_dir = DATASET_METADATA_DIR
 
         self.data_path = root_dir
-        all_scan_names = list(
-            set(
-                [
-                    os.path.basename(x)[0:12]
-                    for x in os.listdir(self.data_path)
-                    if x.startswith("scene")
-                ]
-            )
-        )
+        all_scan_names = list(set([os.path.basename(x)[0:12] for x in os.listdir(self.data_path) if x.startswith("scene")]))
         if split_set == "all":
             self.scan_names = all_scan_names
         elif split_set in ["train", "val", "test"]:
@@ -200,9 +181,7 @@ class ScannetDetectionDataset(Dataset):
                 self.scan_names = f.read().splitlines()
             # remove unavailiable scans
             num_scans = len(self.scan_names)
-            self.scan_names = [
-                sname for sname in self.scan_names if sname in all_scan_names
-            ]
+            self.scan_names = [sname for sname in self.scan_names if sname in all_scan_names]
             print(f"kept {len(self.scan_names)} scans out of {num_scans}")
         else:
             raise ValueError(f"Unknown split name {split_set}")
@@ -224,12 +203,8 @@ class ScannetDetectionDataset(Dataset):
     def __getitem__(self, idx):
         scan_name = self.scan_names[idx]
         mesh_vertices = np.load(os.path.join(self.data_path, scan_name) + "_vert.npy")
-        instance_labels = np.load(
-            os.path.join(self.data_path, scan_name) + "_ins_label.npy"
-        )
-        semantic_labels = np.load(
-            os.path.join(self.data_path, scan_name) + "_sem_label.npy"
-        )
+        instance_labels = np.load(os.path.join(self.data_path, scan_name) + "_ins_label.npy")
+        semantic_labels = np.load(os.path.join(self.data_path, scan_name) + "_sem_label.npy")
         instance_bboxes = np.load(os.path.join(self.data_path, scan_name) + "_bbox.npy")
 
         if not self.use_color:
@@ -259,24 +234,18 @@ class ScannetDetectionDataset(Dataset):
                 point_cloud,
                 instance_bboxes,
                 per_point_labels,
-            ) = self.random_cuboid_augmentor(
-                point_cloud, instance_bboxes, [instance_labels, semantic_labels]
-            )
+            ) = self.random_cuboid_augmentor(point_cloud, instance_bboxes, [instance_labels, semantic_labels])
             instance_labels = per_point_labels[0]
             semantic_labels = per_point_labels[1]
 
-        point_cloud, choices = pc_util.random_sampling(
-            point_cloud, self.num_points, return_choices=True
-        )
+        point_cloud, choices = pc_util.random_sampling(point_cloud, self.num_points, return_choices=True)
         instance_labels = instance_labels[choices]
         semantic_labels = semantic_labels[choices]
 
         sem_seg_labels = np.ones_like(semantic_labels) * IGNORE_LABEL
 
         for _c in self.dataset_config.nyu40ids_semseg:
-            sem_seg_labels[
-                semantic_labels == _c
-            ] = self.dataset_config.nyu40id2class_semseg[_c]
+            sem_seg_labels[semantic_labels == _c] = self.dataset_config.nyu40id2class_semseg[_c]
 
         pcl_color = pcl_color[choices]
 
@@ -300,9 +269,7 @@ class ScannetDetectionDataset(Dataset):
             rot_angle = (np.random.random() * np.pi / 18) - np.pi / 36  # -5 ~ +5 degree
             rot_mat = pc_util.rotz(rot_angle)
             point_cloud[:, 0:3] = np.dot(point_cloud[:, 0:3], np.transpose(rot_mat))
-            target_bboxes = self.dataset_config.rotate_aligned_boxes(
-                target_bboxes, rot_mat
-            )
+            target_bboxes = self.dataset_config.rotate_aligned_boxes(target_bboxes, rot_mat)
 
         raw_sizes = target_bboxes[:, 3:6]
         point_cloud_dims_min = point_cloud.min(axis=0)
@@ -337,15 +304,12 @@ class ScannetDetectionDataset(Dataset):
         ret_dict["point_clouds"] = point_cloud.astype(np.float32)
         ret_dict["gt_box_corners"] = box_corners.astype(np.float32)
         ret_dict["gt_box_centers"] = box_centers.astype(np.float32)
-        ret_dict["gt_box_centers_normalized"] = box_centers_normalized.astype(
-            np.float32
-        )
+        ret_dict["gt_box_centers_normalized"] = box_centers_normalized.astype(np.float32)
         ret_dict["gt_angle_class_label"] = angle_classes.astype(np.int64)
         ret_dict["gt_angle_residual_label"] = angle_residuals.astype(np.float32)
         target_bboxes_semcls = np.zeros((MAX_NUM_OBJ))
         target_bboxes_semcls[0 : instance_bboxes.shape[0]] = [
-            self.dataset_config.nyu40id2class[x]
-            for x in instance_bboxes[:, -1][0 : instance_bboxes.shape[0]]
+            self.dataset_config.nyu40id2class[x] for x in instance_bboxes[:, -1][0 : instance_bboxes.shape[0]]
         ]
         ret_dict["gt_box_sem_cls_label"] = target_bboxes_semcls.astype(np.int64)
         ret_dict["gt_box_present"] = target_bboxes_mask.astype(np.float32)

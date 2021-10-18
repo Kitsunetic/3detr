@@ -2,24 +2,25 @@
 
 import argparse
 import os
-import sys
 import pickle
+import sys
 
 import numpy as np
 import torch
 from torch.multiprocessing import set_start_method
 from torch.utils.data import DataLoader, DistributedSampler
 
+from criterion import build_criterion
+
 # 3DETR codebase specific imports
 from datasets import build_dataset
 from engine import evaluate, train_one_epoch
 from models import build_model
 from optimizer import build_optimizer
-from criterion import build_criterion
-from utils.dist import init_distributed, is_distributed, is_primary, get_rank, barrier
-from utils.misc import my_worker_init_fn
-from utils.io import save_checkpoint, resume_if_possible
+from utils.dist import barrier, get_rank, init_distributed, is_distributed, is_primary
+from utils.io import resume_if_possible, save_checkpoint
 from utils.logger import Logger
+from utils.misc import my_worker_init_fn
 
 
 def make_args_parser():
@@ -33,9 +34,7 @@ def make_args_parser():
     parser.add_argument("--lr_scheduler", default="cosine", type=str)
     parser.add_argument("--weight_decay", default=0.1, type=float)
     parser.add_argument("--filter_biases_wd", default=False, action="store_true")
-    parser.add_argument(
-        "--clip_gradient", default=0.1, type=float, help="Max L2 norm of the gradient"
-    )
+    parser.add_argument("--clip_gradient", default=0.1, type=float, help="Max L2 norm of the gradient")
 
     ##### Model #####
     parser.add_argument(
@@ -46,9 +45,7 @@ def make_args_parser():
         choices=["3detr"],
     )
     ### Encoder
-    parser.add_argument(
-        "--enc_type", default="vanilla", choices=["masked", "maskedv2", "vanilla"]
-    )
+    parser.add_argument("--enc_type", default="vanilla", choices=["masked", "maskedv2", "vanilla"])
     # Below options are only valid for vanilla encoder
     parser.add_argument("--enc_nlayers", default=3, type=int)
     parser.add_argument("--enc_dim", default=256, type=int)
@@ -76,9 +73,7 @@ def make_args_parser():
 
     ### Other model params
     parser.add_argument("--preenc_npoints", default=2048, type=int)
-    parser.add_argument(
-        "--pos_embed", default="fourier", type=str, choices=["fourier", "sine"]
-    )
+    parser.add_argument("--pos_embed", default="fourier", type=str, choices=["fourier", "sine"])
     parser.add_argument("--nqueries", default=256, type=int)
     parser.add_argument("--use_color", default=False, action="store_true")
 
@@ -92,18 +87,14 @@ def make_args_parser():
     ### Loss Weights
     parser.add_argument("--loss_giou_weight", default=0, type=float)
     parser.add_argument("--loss_sem_cls_weight", default=1, type=float)
-    parser.add_argument(
-        "--loss_no_object_weight", default=0.2, type=float
-    )  # "no object" or "background" class for detection
+    parser.add_argument("--loss_no_object_weight", default=0.2, type=float)  # "no object" or "background" class for detection
     parser.add_argument("--loss_angle_cls_weight", default=0.1, type=float)
     parser.add_argument("--loss_angle_reg_weight", default=0.5, type=float)
     parser.add_argument("--loss_center_weight", default=5.0, type=float)
     parser.add_argument("--loss_size_weight", default=1.0, type=float)
 
     ##### Dataset #####
-    parser.add_argument(
-        "--dataset_name", required=True, type=str, choices=["scannet", "sunrgbd"]
-    )
+    parser.add_argument("--dataset_name", required=True, type=str, choices=["scannet", "sunrgbd"])
     parser.add_argument(
         "--dataset_root_dir",
         type=str,
@@ -241,9 +232,7 @@ def do_train(
                 print("==" * 10)
                 logger.log_scalars(metrics_dict, curr_iter, prefix="Test/")
 
-            if is_primary() and (
-                len(best_val_metrics) == 0 or best_val_metrics[0.25]["mAP"] < ap25
-            ):
+            if is_primary() and (len(best_val_metrics) == 0 or best_val_metrics[0.25]["mAP"] < ap25):
                 best_val_metrics = metrics
                 filename = "checkpoint_best.pth"
                 save_checkpoint(
@@ -255,9 +244,7 @@ def do_train(
                     best_val_metrics,
                     filename=filename,
                 )
-                print(
-                    f"Epoch [{epoch}/{args.max_epoch}] saved current best val checkpoint at {filename}; ap25 {ap25}"
-                )
+                print(f"Epoch [{epoch}/{args.max_epoch}] saved current best val checkpoint at {filename}; ap25 {ap25}")
 
     # always evaluate last checkpoint
     epoch = args.max_epoch - 1
@@ -328,7 +315,9 @@ def main(local_rank, args):
         print(
             "Initializing Distributed Training. This is in BETA mode and hasn't been tested thoroughly. Use at your own risk :)"
         )
-        print("To get the maximum speed-up consider reducing evaluations on val set by setting --eval_every_epoch to greater than 50")
+        print(
+            "To get the maximum speed-up consider reducing evaluations on val set by setting --eval_every_epoch to greater than 50"
+        )
         init_distributed(
             local_rank,
             global_rank=local_rank,
@@ -351,9 +340,7 @@ def main(local_rank, args):
 
     if is_distributed():
         model = torch.nn.SyncBatchNorm.convert_sync_batchnorm(model)
-        model = torch.nn.parallel.DistributedDataParallel(
-            model, device_ids=[local_rank]
-        )
+        model = torch.nn.parallel.DistributedDataParallel(model, device_ids=[local_rank])
     criterion = build_criterion(args, dataset_config)
     criterion = criterion.cuda(local_rank)
 
@@ -387,15 +374,11 @@ def main(local_rank, args):
         criterion = None  # faster evaluation
         test_model(args, model, model_no_ddp, criterion, dataset_config, dataloaders)
     else:
-        assert (
-            args.checkpoint_dir is not None
-        ), f"Please specify a checkpoint dir using --checkpoint_dir"
+        assert args.checkpoint_dir is not None, f"Please specify a checkpoint dir using --checkpoint_dir"
         if is_primary() and not os.path.isdir(args.checkpoint_dir):
             os.makedirs(args.checkpoint_dir, exist_ok=True)
         optimizer = build_optimizer(args, model_no_ddp)
-        loaded_epoch, best_val_metrics = resume_if_possible(
-            args.checkpoint_dir, model_no_ddp, optimizer
-        )
+        loaded_epoch, best_val_metrics = resume_if_possible(args.checkpoint_dir, model_no_ddp, optimizer)
         args.start_epoch = loaded_epoch + 1
         do_train(
             args,

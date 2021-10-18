@@ -8,7 +8,7 @@ import pickle
 
 ## Define the weights you want and where to store them
 dataset = "scannet"
-encoder = "_masked" # or ""
+encoder = "_masked"  # or ""
 epoch = 1080
 base_url = "https://dl.fbaipublicfiles.com/3detr/checkpoints"
 local_dir = "/tmp/"

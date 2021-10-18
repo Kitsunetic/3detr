@@ -60,9 +60,7 @@ def shift_scale_points(pred_xyz, src_range, dst_range=None):
 
     src_diff = src_range[1][:, None, :] - src_range[0][:, None, :]
     dst_diff = dst_range[1][:, None, :] - dst_range[0][:, None, :]
-    prop_xyz = (
-        ((pred_xyz - src_range[0][:, None, :]) * dst_diff) / src_diff
-    ) + dst_range[0][:, None, :]
+    prop_xyz = (((pred_xyz - src_range[0][:, None, :]) * dst_diff) / src_diff) + dst_range[0][:, None, :]
     return prop_xyz
 
 
@@ -79,9 +77,7 @@ def rotate_point_cloud(points, rotation_matrix=None):
     if rotation_matrix is None:
         rotation_angle = np.random.uniform() * 2 * np.pi
         sinval, cosval = np.sin(rotation_angle), np.cos(rotation_angle)
-        rotation_matrix = np.array(
-            [[cosval, sinval, 0], [-sinval, cosval, 0], [0, 0, 1]]
-        )
+        rotation_matrix = np.array([[cosval, sinval, 0], [-sinval, cosval, 0], [0, 0, 1]])
     ctr = points.mean(axis=0)
     rotated_data = np.dot(points - ctr, rotation_matrix) + ctr
     return rotated_data, rotation_matrix
@@ -285,10 +281,6 @@ def write_lines_as_cylinders(pcl, filename, rad=0.005, res=64):
         vec = tgt - src  # compute again since align_vectors modifies vec in-place!
         M[:3, 3] = 0.5 * src + 0.5 * tgt
         height = np.sqrt(np.dot(vec, vec))
-        scene.add_geometry(
-            trimesh.creation.cylinder(
-                radius=rad, height=height, sections=res, transform=M
-            )
-        )
+        scene.add_geometry(trimesh.creation.cylinder(radius=rad, height=height, sections=res, transform=M))
     mesh_list = trimesh.util.concatenate(scene.dump())
     trimesh.io.export.export_mesh(mesh_list, "%s.ply" % (filename), file_type="ply")

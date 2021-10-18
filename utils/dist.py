@@ -38,10 +38,11 @@ def setup_print_for_distributed(is_primary):
     This function disables printing when not in primary process
     """
     import builtins as __builtin__
+
     builtin_print = __builtin__.print
 
     def print(*args, **kwargs):
-        force = kwargs.pop('force', False)
+        force = kwargs.pop("force", False)
         if is_primary or force:
             builtin_print(*args, **kwargs)
 
@@ -142,9 +143,7 @@ def all_gather_pickle(data, device):
     for _ in size_list:
         tensor_list.append(torch.empty((max_size,), dtype=torch.uint8, device=device))
     if local_size != max_size:
-        padding = torch.empty(
-            size=(max_size - local_size,), dtype=torch.uint8, device=device
-        )
+        padding = torch.empty(size=(max_size - local_size,), dtype=torch.uint8, device=device)
         tensor = torch.cat((tensor, padding), dim=0)
     dist.all_gather(tensor_list, tensor)
 
@@ -161,7 +160,7 @@ def all_gather_dict(data):
     Run all_gather on data which is a dictionary of Tensors
     """
     assert isinstance(data, dict)
-    
+
     gathered_dict = {}
     for item_key in data:
         if isinstance(data[item_key], torch.Tensor):
@@ -174,4 +173,3 @@ def all_gather_dict(data):
                 gathered_tensor = data[item_key]
             gathered_dict[item_key] = gathered_tensor
     return gathered_dict
-        

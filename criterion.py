@@ -1,12 +1,13 @@
 # Copyright (c) Facebook, Inc. and its affiliates.
+import numpy as np
 import torch
 import torch.nn as nn
-import numpy as np
 import torch.nn.functional as F
+from scipy.optimize import linear_sum_assignment
+
 from utils.box_util import generalized_box3d_iou
 from utils.dist import all_reduce_average
 from utils.misc import huber_loss
-from scipy.optimize import linear_sum_assignment
 
 
 class Matcher(nn.Module):
@@ -33,11 +34,7 @@ class Matcher(nn.Module):
 
         # classification cost: batch x nqueries x ngt matrix
         pred_cls_prob = outputs["sem_cls_prob"]
-        gt_box_sem_cls_labels = (
-            targets["gt_box_sem_cls_label"]
-            .unsqueeze(1)
-            .expand(batchsize, nqueries, ngt)
-        )
+        gt_box_sem_cls_labels = targets["gt_box_sem_cls_label"].unsqueeze(1).expand(batchsize, nqueries, ngt)
         class_mat = -torch.gather(pred_cls_prob, 2, gt_box_sem_cls_labels)
 
         # objectness cost: batch x nqueries x 1
@@ -61,20 +58,13 @@ class Matcher(nn.Module):
 
         # auxiliary variables useful for batched loss computation
         batch_size, nprop = final_cost.shape[0], final_cost.shape[1]
-        per_prop_gt_inds = torch.zeros(
-            [batch_size, nprop], dtype=torch.int64, device=pred_cls_prob.device
-        )
-        proposal_matched_mask = torch.zeros(
-            [batch_size, nprop], dtype=torch.float32, device=pred_cls_prob.device
-        )
+        per_prop_gt_inds = torch.zeros([batch_size, nprop], dtype=torch.int64, device=pred_cls_prob.device)
+        proposal_matched_mask = torch.zeros([batch_size, nprop], dtype=torch.float32, device=pred_cls_prob.device)
         for b in range(batchsize):
             assign = []
             if nactual_gt[b] > 0:
                 assign = linear_sum_assignment(final_cost[b, :, : nactual_gt[b]])
-                assign = [
-                    torch.from_numpy(x).long().to(device=pred_cls_prob.device)
-                    for x in assign
-                ]
+                assign = [torch.from_numpy(x).long().to(device=pred_cls_prob.device) for x in assign]
                 per_prop_gt_inds[b, assign[0]] = assign[1]
                 proposal_matched_mask[b, assign[0]] = 1
             assignments.append(assign)
@@ -142,12 +132,8 @@ class SetCriterion(nn.Module):
         # loss = F.cross_entropy(pred_logits, sem_cls_targets, self.semcls_percls_weights, reduction="mean")
 
         pred_logits = outputs["sem_cls_logits"]
-        gt_box_label = torch.gather(
-            targets["gt_box_sem_cls_label"], 1, assignments["per_prop_gt_inds"]
-        )
-        gt_box_label[assignments["proposal_matched_mask"].int() == 0] = (
-            pred_logits.shape[-1] - 1
-        )
+        gt_box_label = torch.gather(targets["gt_box_sem_cls_label"], 1, assignments["per_prop_gt_inds"])
+        gt_box_label[assignments["proposal_matched_mask"].int() == 0] = pred_logits.shape[-1] - 1
         loss = F.cross_entropy(
             pred_logits.transpose(2, 1),
             gt_box_label,
@@ -164,9 +150,7 @@ class SetCriterion(nn.Module):
         if targets["num_boxes_replica"] > 0:
             gt_angle_label = targets["gt_angle_class_label"]
             gt_angle_residual = targets["gt_angle_residual_label"]
-            gt_angle_residual_normalized = gt_angle_residual / (
-                np.pi / self.dataset_config.num_angle_bin
-            )
+            gt_angle_residual_normalized = gt_angle_residual / (np.pi / self.dataset_config.num_angle_bin)
 
             # # Non vectorized version
             # assignments = assignments["assignments"]
@@ -190,33 +174,17 @@ class SetCriterion(nn.Module):
             # angle_cls_loss = F.cross_entropy(p_angle_logits, t_angle_labels, reduction="sum")
             # angle_reg_loss = huber_loss(p_angle_resid.flatten() - t_angle_resid.flatten()).sum()
 
-            gt_angle_label = torch.gather(
-                gt_angle_label, 1, assignments["per_prop_gt_inds"]
-            )
-            angle_cls_loss = F.cross_entropy(
-                angle_logits.transpose(2, 1), gt_angle_label, reduction="none"
-            )
-            angle_cls_loss = (
-                angle_cls_loss * assignments["proposal_matched_mask"]
-            ).sum()
+            gt_angle_label = torch.gather(gt_angle_label, 1, assignments["per_prop_gt_inds"])
+            angle_cls_loss = F.cross_entropy(angle_logits.transpose(2, 1), gt_angle_label, reduction="none")
+            angle_cls_loss = (angle_cls_loss * assignments["proposal_matched_mask"]).sum()
 
-            gt_angle_residual_normalized = torch.gather(
-                gt_angle_residual_normalized, 1, assignments["per_prop_gt_inds"]
-            )
-            gt_angle_label_one_hot = torch.zeros_like(
-                angle_residual, dtype=torch.float32
-            )
+            gt_angle_residual_normalized = torch.gather(gt_angle_residual_normalized, 1, assignments["per_prop_gt_inds"])
+            gt_angle_label_one_hot = torch.zeros_like(angle_residual, dtype=torch.float32)
             gt_angle_label_one_hot.scatter_(2, gt_angle_label.unsqueeze(-1), 1)
 
-            angle_residual_for_gt_class = torch.sum(
-                angle_residual * gt_angle_label_one_hot, -1
-            )
-            angle_reg_loss = huber_loss(
-                angle_residual_for_gt_class - gt_angle_residual_normalized, delta=1.0
-            )
-            angle_reg_loss = (
-                angle_reg_loss * assignments["proposal_matched_mask"]
-            ).sum()
+            angle_residual_for_gt_class = torch.sum(angle_residual * gt_angle_label_one_hot, -1)
+            angle_reg_loss = huber_loss(angle_residual_for_gt_class - gt_angle_residual_normalized, delta=1.0)
+            angle_reg_loss = (angle_reg_loss * assignments["proposal_matched_mask"]).sum()
 
             angle_cls_loss /= targets["num_boxes"]
             angle_reg_loss /= targets["num_boxes"]
@@ -237,9 +205,7 @@ class SetCriterion(nn.Module):
             #         center_loss += center_dist[b, assign[b][0], assign[b][1]].sum()
 
             # select appropriate distances by using proposal to gt matching
-            center_loss = torch.gather(
-                center_dist, 2, assignments["per_prop_gt_inds"].unsqueeze(-1)
-            ).squeeze(-1)
+            center_loss = torch.gather(center_dist, 2, assignments["per_prop_gt_inds"].unsqueeze(-1)).squeeze(-1)
             # zero-out non-matched proposals
             center_loss = center_loss * assignments["proposal_matched_mask"]
             center_loss = center_loss.sum()
@@ -263,9 +229,7 @@ class SetCriterion(nn.Module):
         #         giou_loss += gious_dist[b, assign[b][0], assign[b][1]].sum()
 
         # select appropriate gious by using proposal to gt matching
-        giou_loss = torch.gather(
-            gious_dist, 2, assignments["per_prop_gt_inds"].unsqueeze(-1)
-        ).squeeze(-1)
+        giou_loss = torch.gather(gious_dist, 2, assignments["per_prop_gt_inds"].unsqueeze(-1)).squeeze(-1)
         # zero-out non-matched proposals
         giou_loss = giou_loss * assignments["proposal_matched_mask"]
         giou_loss = giou_loss.sum()
@@ -296,16 +260,12 @@ class SetCriterion(nn.Module):
             # construct gt_box_sizes as [batch x nprop x 3] matrix by using proposal to gt matching
             gt_box_sizes = torch.stack(
                 [
-                    torch.gather(
-                        gt_box_sizes[:, :, x], 1, assignments["per_prop_gt_inds"]
-                    )
+                    torch.gather(gt_box_sizes[:, :, x], 1, assignments["per_prop_gt_inds"])
                     for x in range(gt_box_sizes.shape[-1])
                 ],
                 dim=-1,
             )
-            size_loss = F.l1_loss(pred_box_sizes, gt_box_sizes, reduction="none").sum(
-                dim=-1
-            )
+            size_loss = F.l1_loss(pred_box_sizes, gt_box_sizes, reduction="none").sum(dim=-1)
 
             # zero-out non-matched proposals
             size_loss *= assignments["proposal_matched_mask"]
@@ -326,9 +286,7 @@ class SetCriterion(nn.Module):
         )
 
         outputs["gious"] = gious
-        center_dist = torch.cdist(
-            outputs["center_normalized"], targets["gt_box_centers_normalized"], p=1
-        )
+        center_dist = torch.cdist(outputs["center_normalized"], targets["gt_box_centers_normalized"], p=1)
         outputs["center_dist"] = center_dist
         assignments = self.matcher(outputs, targets)
 
@@ -337,8 +295,7 @@ class SetCriterion(nn.Module):
         for k in self.loss_functions:
             loss_wt_key = k + "_weight"
             if (
-                loss_wt_key in self.loss_weight_dict
-                and self.loss_weight_dict[loss_wt_key] > 0
+                loss_wt_key in self.loss_weight_dict and self.loss_weight_dict[loss_wt_key] > 0
             ) or loss_wt_key not in self.loss_weight_dict:
                 # only compute losses with loss_wt > 0
                 # certain losses like cardinality are only logged and have no loss weight
@@ -357,17 +314,13 @@ class SetCriterion(nn.Module):
         num_boxes = torch.clamp(all_reduce_average(nactual_gt.sum()), min=1).item()
         targets["nactual_gt"] = nactual_gt
         targets["num_boxes"] = num_boxes
-        targets[
-            "num_boxes_replica"
-        ] = nactual_gt.sum().item()  # number of boxes on this worker for dist training
+        targets["num_boxes_replica"] = nactual_gt.sum().item()  # number of boxes on this worker for dist training
 
         loss, loss_dict = self.single_output_forward(outputs["outputs"], targets)
 
         if "aux_outputs" in outputs:
             for k in range(len(outputs["aux_outputs"])):
-                interm_loss, interm_loss_dict = self.single_output_forward(
-                    outputs["aux_outputs"][k], targets
-                )
+                interm_loss, interm_loss_dict = self.single_output_forward(outputs["aux_outputs"][k], targets)
 
                 loss += interm_loss
                 for interm_key in interm_loss_dict:

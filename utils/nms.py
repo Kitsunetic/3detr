@@ -69,9 +69,7 @@ def nms_2d_faster(boxes, overlap_threshold, old_type=False):
             inter = w * h
             o = inter / (area[i] + area[I[: last - 1]] - inter)
 
-        I = np.delete(
-            I, np.concatenate(([last - 1], np.where(o > overlap_threshold)[0]))
-        )
+        I = np.delete(I, np.concatenate(([last - 1], np.where(o > overlap_threshold)[0])))
 
     return pick
 
@@ -110,9 +108,7 @@ def nms_3d_faster(boxes, overlap_threshold, old_type=False):
             inter = l * w * h
             o = inter / (area[i] + area[I[: last - 1]] - inter)
 
-        I = np.delete(
-            I, np.concatenate(([last - 1], np.where(o > overlap_threshold)[0]))
-        )
+        I = np.delete(I, np.concatenate(([last - 1], np.where(o > overlap_threshold)[0])))
 
     return pick
 
@@ -155,8 +151,6 @@ def nms_3d_faster_samecls(boxes, overlap_threshold, old_type=False):
             o = inter / (area[i] + area[I[: last - 1]] - inter)
         o = o * (cls1 == cls2)
 
-        I = np.delete(
-            I, np.concatenate(([last - 1], np.where(o > overlap_threshold)[0]))
-        )
+        I = np.delete(I, np.concatenate(([last - 1], np.where(o > overlap_threshold)[0])))
 
     return pick

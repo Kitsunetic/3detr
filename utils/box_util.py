@@ -13,9 +13,7 @@ from utils.misc import to_list_1d, to_list_3d
 try:
     from utils.box_intersection import box_intersection
 except ImportError:
-    print(
-        "Could not import cythonized box intersection. Consider compiling box_intersection.pyx for faster training."
-    )
+    print("Could not import cythonized box intersection. Consider compiling box_intersection.pyx for faster training.")
     box_intersection = None
 
 
@@ -269,15 +267,9 @@ def get_3d_box_batch_np(box_size, angle, center):
     w = np.expand_dims(box_size[..., 1], -1)
     h = np.expand_dims(box_size[..., 2], -1)
     corners_3d = np.zeros(tuple(list(input_shape) + [8, 3]))
-    corners_3d[..., :, 0] = np.concatenate(
-        (l / 2, l / 2, -l / 2, -l / 2, l / 2, l / 2, -l / 2, -l / 2), -1
-    )
-    corners_3d[..., :, 1] = np.concatenate(
-        (h / 2, h / 2, h / 2, h / 2, -h / 2, -h / 2, -h / 2, -h / 2), -1
-    )
-    corners_3d[..., :, 2] = np.concatenate(
-        (w / 2, -w / 2, -w / 2, w / 2, w / 2, -w / 2, -w / 2, w / 2), -1
-    )
+    corners_3d[..., :, 0] = np.concatenate((l / 2, l / 2, -l / 2, -l / 2, l / 2, l / 2, -l / 2, -l / 2), -1)
+    corners_3d[..., :, 1] = np.concatenate((h / 2, h / 2, h / 2, h / 2, -h / 2, -h / 2, -h / 2, -h / 2), -1)
+    corners_3d[..., :, 2] = np.concatenate((w / 2, -w / 2, -w / 2, w / 2, w / 2, -w / 2, -w / 2, w / 2), -1)
     tlist = [i for i in range(len(input_shape))]
     tlist += [len(input_shape) + 1, len(input_shape)]
     corners_3d = np.matmul(corners_3d, np.transpose(R, tuple(tlist)))
@@ -297,9 +289,7 @@ def flip_axis_to_camera_tensor(pc):
 
 def roty_batch_tensor(t):
     input_shape = t.shape
-    output = torch.zeros(
-        tuple(list(input_shape) + [3, 3]), dtype=torch.float32, device=t.device
-    )
+    output = torch.zeros(tuple(list(input_shape) + [3, 3]), dtype=torch.float32, device=t.device)
     c = torch.cos(t)
     s = torch.sin(t)
     output[..., 0, 0] = c
@@ -331,18 +321,10 @@ def get_3d_box_batch_tensor(box_size, angle, center):
     l = torch.unsqueeze(box_size[..., 0], -1)  # [x1,...,xn,1]
     w = torch.unsqueeze(box_size[..., 1], -1)
     h = torch.unsqueeze(box_size[..., 2], -1)
-    corners_3d = torch.zeros(
-        tuple(list(input_shape) + [8, 3]), device=box_size.device, dtype=torch.float32
-    )
-    corners_3d[..., :, 0] = torch.cat(
-        (l / 2, l / 2, -l / 2, -l / 2, l / 2, l / 2, -l / 2, -l / 2), -1
-    )
-    corners_3d[..., :, 1] = torch.cat(
-        (h / 2, h / 2, h / 2, h / 2, -h / 2, -h / 2, -h / 2, -h / 2), -1
-    )
-    corners_3d[..., :, 2] = torch.cat(
-        (w / 2, -w / 2, -w / 2, w / 2, w / 2, -w / 2, -w / 2, w / 2), -1
-    )
+    corners_3d = torch.zeros(tuple(list(input_shape) + [8, 3]), device=box_size.device, dtype=torch.float32)
+    corners_3d[..., :, 0] = torch.cat((l / 2, l / 2, -l / 2, -l / 2, l / 2, l / 2, -l / 2, -l / 2), -1)
+    corners_3d[..., :, 1] = torch.cat((h / 2, h / 2, h / 2, h / 2, -h / 2, -h / 2, -h / 2, -h / 2), -1)
+    corners_3d[..., :, 2] = torch.cat((w / 2, -w / 2, -w / 2, w / 2, w / 2, -w / 2, -w / 2, w / 2), -1)
     tlist = [i for i in range(len(input_shape))]
     tlist += [len(input_shape) + 1, len(input_shape)]
     corners_3d = torch.matmul(corners_3d, R.permute(tlist))
@@ -365,15 +347,9 @@ def get_3d_box_batch(box_size, angle, center):
     w = np.expand_dims(box_size[..., 1], -1)
     h = np.expand_dims(box_size[..., 2], -1)
     corners_3d = np.zeros(tuple(list(input_shape) + [8, 3]))
-    corners_3d[..., :, 0] = np.concatenate(
-        (l / 2, l / 2, -l / 2, -l / 2, l / 2, l / 2, -l / 2, -l / 2), -1
-    )
-    corners_3d[..., :, 1] = np.concatenate(
-        (h / 2, h / 2, h / 2, h / 2, -h / 2, -h / 2, -h / 2, -h / 2), -1
-    )
-    corners_3d[..., :, 2] = np.concatenate(
-        (w / 2, -w / 2, -w / 2, w / 2, w / 2, -w / 2, -w / 2, w / 2), -1
-    )
+    corners_3d[..., :, 0] = np.concatenate((l / 2, l / 2, -l / 2, -l / 2, l / 2, l / 2, -l / 2, -l / 2), -1)
+    corners_3d[..., :, 1] = np.concatenate((h / 2, h / 2, h / 2, h / 2, -h / 2, -h / 2, -h / 2, -h / 2), -1)
+    corners_3d[..., :, 2] = np.concatenate((w / 2, -w / 2, -w / 2, w / 2, w / 2, -w / 2, -w / 2, w / 2), -1)
     tlist = [i for i in range(len(input_shape))]
     tlist += [len(input_shape) + 1, len(input_shape)]
     corners_3d = np.matmul(corners_3d, np.transpose(R, tuple(tlist)))
@@ -384,9 +360,7 @@ def get_3d_box_batch(box_size, angle, center):
 ####### GIoU related operations. Differentiable #############
 
 
-def helper_computeIntersection(
-    cp1: torch.Tensor, cp2: torch.Tensor, s: torch.Tensor, e: torch.Tensor
-):
+def helper_computeIntersection(cp1: torch.Tensor, cp2: torch.Tensor, s: torch.Tensor, e: torch.Tensor):
     dc = [cp1[0] - cp2[0], cp1[1] - cp2[1]]
     dp = [s[0] - e[0], s[1] - e[1]]
     n1 = cp1[0] * cp2[1] - cp1[1] * cp2[0]
@@ -448,15 +422,9 @@ def box3d_vol_tensor(corners):
         # batch x prop x 8 x 3
         reshape = True
         corners = corners.view(-1, 8, 3)
-    a = torch.sqrt(
-        (corners[:, 0, :] - corners[:, 1, :]).pow(2).sum(dim=1).clamp(min=EPS)
-    )
-    b = torch.sqrt(
-        (corners[:, 1, :] - corners[:, 2, :]).pow(2).sum(dim=1).clamp(min=EPS)
-    )
-    c = torch.sqrt(
-        (corners[:, 0, :] - corners[:, 4, :]).pow(2).sum(dim=1).clamp(min=EPS)
-    )
+    a = torch.sqrt((corners[:, 0, :] - corners[:, 1, :]).pow(2).sum(dim=1).clamp(min=EPS))
+    b = torch.sqrt((corners[:, 1, :] - corners[:, 2, :]).pow(2).sum(dim=1).clamp(min=EPS))
+    c = torch.sqrt((corners[:, 0, :] - corners[:, 4, :]).pow(2).sum(dim=1).clamp(min=EPS))
     vols = a * b * c
     if reshape:
         vols = vols.view(B, K)
@@ -591,10 +559,7 @@ def generalized_box3d_iou_tensor(
                     if len(inter) > 0:
                         xs = torch.stack([x[0] for x in inter])
                         ys = torch.stack([x[1] for x in inter])
-                        inter_areas[b, k1, k2] = torch.abs(
-                            torch.dot(xs, torch.roll(ys, 1))
-                            - torch.dot(ys, torch.roll(xs, 1))
-                        )
+                        inter_areas[b, k1, k2] = torch.abs(torch.dot(xs, torch.roll(ys, 1)) - torch.dot(ys, torch.roll(xs, 1)))
         inter_areas.mul_(0.5)
     else:
         inter_areas = non_rot_inter_areas
@@ -685,12 +650,8 @@ def generalized_box3d_iou_cython(
         rect1 = rect1.cpu().numpy().astype(np.float32)
         rect2 = rect2.cpu().numpy().astype(np.float32)
         nums_k2_np = nums_k2.cpu().detach().numpy().astype(np.int32)
-        non_rot_inter_areas_np = (
-            non_rot_inter_areas.cpu().detach().numpy().astype(np.float32)
-        )
-        box_intersection(
-            rect1, rect2, non_rot_inter_areas_np, nums_k2_np, inter_areas, True
-        )
+        non_rot_inter_areas_np = non_rot_inter_areas.cpu().detach().numpy().astype(np.float32)
+        box_intersection(rect1, rect2, non_rot_inter_areas_np, nums_k2_np, inter_areas, True)
         inter_areas = torch.from_numpy(inter_areas)
     else:
         inter_areas = non_rot_inter_areas
@@ -725,13 +686,9 @@ def generalized_box3d_iou(
     if needs_grad is True or box_intersection is None:
         context = torch.enable_grad if needs_grad else torch.no_grad
         with context():
-            return generalized_box3d_iou_tensor_jit(
-                corners1, corners2, nums_k2, rotated_boxes, return_inter_vols_only
-            )
+            return generalized_box3d_iou_tensor_jit(corners1, corners2, nums_k2, rotated_boxes, return_inter_vols_only)
 
     else:
         # Cythonized implementation of GIoU
         with torch.no_grad():
-            return generalized_box3d_iou_cython(
-                corners1, corners2, nums_k2, rotated_boxes, return_inter_vols_only
-            )
+            return generalized_box3d_iou_cython(corners1, corners2, nums_k2, rotated_boxes, return_inter_vols_only)

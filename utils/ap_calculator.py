@@ -14,8 +14,7 @@ import numpy as np
 import scipy.special as scipy_special
 import torch
 
-from utils.box_util import (extract_pc_in_box3d, flip_axis_to_camera_np,
-                            get_3d_box, get_3d_box_batch)
+from utils.box_util import extract_pc_in_box3d, flip_axis_to_camera_np, get_3d_box, get_3d_box_batch
 from utils.eval_det import eval_det_multiprocessing, get_iou_obb
 from utils.nms import nms_2d_faster, nms_3d_faster, nms_3d_faster_samecls
 
@@ -36,9 +35,7 @@ def softmax(x):
 
 
 # This is exactly the same as VoteNet so that we can compare evaluations.
-def parse_predictions(
-    predicted_boxes, sem_cls_probs, objectness_probs, point_cloud, config_dict
-):
+def parse_predictions(predicted_boxes, sem_cls_probs, objectness_probs, point_cloud, config_dict):
     """Parse predictions to OBB parameters and suppress overlapping boxes
 
     Args:
@@ -92,18 +89,10 @@ def parse_predictions(
         for i in range(bsize):
             boxes_2d_with_prob = np.zeros((K, 5))
             for j in range(K):
-                boxes_2d_with_prob[j, 0] = np.min(
-                    pred_corners_3d_upright_camera[i, j, :, 0]
-                )
-                boxes_2d_with_prob[j, 2] = np.max(
-                    pred_corners_3d_upright_camera[i, j, :, 0]
-                )
-                boxes_2d_with_prob[j, 1] = np.min(
-                    pred_corners_3d_upright_camera[i, j, :, 2]
-                )
-                boxes_2d_with_prob[j, 3] = np.max(
-                    pred_corners_3d_upright_camera[i, j, :, 2]
-                )
+                boxes_2d_with_prob[j, 0] = np.min(pred_corners_3d_upright_camera[i, j, :, 0])
+                boxes_2d_with_prob[j, 2] = np.max(pred_corners_3d_upright_camera[i, j, :, 0])
+                boxes_2d_with_prob[j, 1] = np.min(pred_corners_3d_upright_camera[i, j, :, 2])
+                boxes_2d_with_prob[j, 3] = np.max(pred_corners_3d_upright_camera[i, j, :, 2])
                 boxes_2d_with_prob[j, 4] = obj_prob[i, j]
             nonempty_box_inds = np.where(nonempty_box_mask[i, :] == 1)[0]
             assert len(nonempty_box_inds) > 0
@@ -121,24 +110,12 @@ def parse_predictions(
         for i in range(bsize):
             boxes_3d_with_prob = np.zeros((K, 7))
             for j in range(K):
-                boxes_3d_with_prob[j, 0] = np.min(
-                    pred_corners_3d_upright_camera[i, j, :, 0]
-                )
-                boxes_3d_with_prob[j, 1] = np.min(
-                    pred_corners_3d_upright_camera[i, j, :, 1]
-                )
-                boxes_3d_with_prob[j, 2] = np.min(
-                    pred_corners_3d_upright_camera[i, j, :, 2]
-                )
-                boxes_3d_with_prob[j, 3] = np.max(
-                    pred_corners_3d_upright_camera[i, j, :, 0]
-                )
-                boxes_3d_with_prob[j, 4] = np.max(
-                    pred_corners_3d_upright_camera[i, j, :, 1]
-                )
-                boxes_3d_with_prob[j, 5] = np.max(
-                    pred_corners_3d_upright_camera[i, j, :, 2]
-                )
+                boxes_3d_with_prob[j, 0] = np.min(pred_corners_3d_upright_camera[i, j, :, 0])
+                boxes_3d_with_prob[j, 1] = np.min(pred_corners_3d_upright_camera[i, j, :, 1])
+                boxes_3d_with_prob[j, 2] = np.min(pred_corners_3d_upright_camera[i, j, :, 2])
+                boxes_3d_with_prob[j, 3] = np.max(pred_corners_3d_upright_camera[i, j, :, 0])
+                boxes_3d_with_prob[j, 4] = np.max(pred_corners_3d_upright_camera[i, j, :, 1])
+                boxes_3d_with_prob[j, 5] = np.max(pred_corners_3d_upright_camera[i, j, :, 2])
                 boxes_3d_with_prob[j, 6] = obj_prob[i, j]
             nonempty_box_inds = np.where(nonempty_box_mask[i, :] == 1)[0]
             assert len(nonempty_box_inds) > 0
@@ -156,28 +133,14 @@ def parse_predictions(
         for i in range(bsize):
             boxes_3d_with_prob = np.zeros((K, 8))
             for j in range(K):
-                boxes_3d_with_prob[j, 0] = np.min(
-                    pred_corners_3d_upright_camera[i, j, :, 0]
-                )
-                boxes_3d_with_prob[j, 1] = np.min(
-                    pred_corners_3d_upright_camera[i, j, :, 1]
-                )
-                boxes_3d_with_prob[j, 2] = np.min(
-                    pred_corners_3d_upright_camera[i, j, :, 2]
-                )
-                boxes_3d_with_prob[j, 3] = np.max(
-                    pred_corners_3d_upright_camera[i, j, :, 0]
-                )
-                boxes_3d_with_prob[j, 4] = np.max(
-                    pred_corners_3d_upright_camera[i, j, :, 1]
-                )
-                boxes_3d_with_prob[j, 5] = np.max(
-                    pred_corners_3d_upright_camera[i, j, :, 2]
-                )
+                boxes_3d_with_prob[j, 0] = np.min(pred_corners_3d_upright_camera[i, j, :, 0])
+                boxes_3d_with_prob[j, 1] = np.min(pred_corners_3d_upright_camera[i, j, :, 1])
+                boxes_3d_with_prob[j, 2] = np.min(pred_corners_3d_upright_camera[i, j, :, 2])
+                boxes_3d_with_prob[j, 3] = np.max(pred_corners_3d_upright_camera[i, j, :, 0])
+                boxes_3d_with_prob[j, 4] = np.max(pred_corners_3d_upright_camera[i, j, :, 1])
+                boxes_3d_with_prob[j, 5] = np.max(pred_corners_3d_upright_camera[i, j, :, 2])
                 boxes_3d_with_prob[j, 6] = obj_prob[i, j]
-                boxes_3d_with_prob[j, 7] = pred_sem_cls[
-                    i, j
-                ]  # only suppress if the two boxes are of the same class!!
+                boxes_3d_with_prob[j, 7] = pred_sem_cls[i, j]  # only suppress if the two boxes are of the same class!!
             nonempty_box_inds = np.where(nonempty_box_mask[i, :] == 1)[0]
             assert len(nonempty_box_inds) > 0
             pick = nms_3d_faster_samecls(
@@ -204,8 +167,7 @@ def parse_predictions(
                         sem_cls_probs[i, j, ii] * obj_prob[i, j],
                     )
                     for j in range(pred_corners_3d_upright_camera.shape[1])
-                    if pred_mask[i, j] == 1
-                    and obj_prob[i, j] > config_dict["conf_thresh"]
+                    if pred_mask[i, j] == 1 and obj_prob[i, j] > config_dict["conf_thresh"]
                 ]
             batch_pred_map_cls.append(cur_list)
         elif config_dict["use_cls_confidence_only"]:
@@ -217,8 +179,7 @@ def parse_predictions(
                         sem_cls_probs[i, j, pred_sem_cls[i, j].item()],
                     )
                     for j in range(pred_corners_3d_upright_camera.shape[1])
-                    if pred_mask[i, j] == 1
-                    and obj_prob[i, j] > config_dict["conf_thresh"]
+                    if pred_mask[i, j] == 1 and obj_prob[i, j] > config_dict["conf_thresh"]
                 ]
             )
         else:
@@ -230,8 +191,7 @@ def parse_predictions(
                         obj_prob[i, j],
                     )
                     for j in range(pred_corners_3d_upright_camera.shape[1])
-                    if pred_mask[i, j] == 1
-                    and obj_prob[i, j] > config_dict["conf_thresh"]
+                    if pred_mask[i, j] == 1 and obj_prob[i, j] > config_dict["conf_thresh"]
                 ]
             )
 
@@ -288,9 +248,7 @@ class APCalculator(object):
         """
         self.ap_iou_thresh = ap_iou_thresh
         if ap_config_dict is None:
-            ap_config_dict = get_ap_config_dict(
-                dataset_config=dataset_config, remove_empty_box=exact_eval
-            )
+            ap_config_dict = get_ap_config_dict(dataset_config=dataset_config, remove_empty_box=exact_eval)
         self.ap_config_dict = ap_config_dict
         self.class2type_map = class2type_map
         self.reset()
@@ -338,9 +296,7 @@ class APCalculator(object):
         gt_box_corners = gt_box_corners.cpu().detach().numpy()
         gt_box_sem_cls_labels = gt_box_sem_cls_labels.cpu().detach().numpy()
         gt_box_present = gt_box_present.cpu().detach().numpy()
-        batch_gt_map_cls = self.make_gt_list(
-            gt_box_corners, gt_box_sem_cls_labels, gt_box_present
-        )
+        batch_gt_map_cls = self.make_gt_list(gt_box_corners, gt_box_sem_cls_labels, gt_box_present)
 
         batch_pred_map_cls = parse_predictions(
             predicted_box_corners,
@@ -372,9 +328,7 @@ class APCalculator(object):
         overall_ret = OrderedDict()
         for ap_iou_thresh in self.ap_iou_thresh:
             ret_dict = OrderedDict()
-            rec, prec, ap = eval_det_multiprocessing(
-                self.pred_map_cls, self.gt_map_cls, ovthresh=ap_iou_thresh
-            )
+            rec, prec, ap = eval_det_multiprocessing(self.pred_map_cls, self.gt_map_cls, ovthresh=ap_iou_thresh)
             for key in sorted(ap.keys()):
                 clsname = self.class2type_map[key] if self.class2type_map else str(key)
                 ret_dict["%s Average Precision" % (clsname)] = ap[key]
@@ -438,9 +392,7 @@ class APCalculator(object):
     def metrics_to_dict(self, overall_ret):
         metrics_dict = {}
         for ap_iou_thresh in self.ap_iou_thresh:
-            metrics_dict[f"mAP_{ap_iou_thresh}"] = (
-                overall_ret[ap_iou_thresh]["mAP"] * 100
-            )
+            metrics_dict[f"mAP_{ap_iou_thresh}"] = overall_ret[ap_iou_thresh]["mAP"] * 100
             metrics_dict[f"AR_{ap_iou_thresh}"] = overall_ret[ap_iou_thresh]["AR"] * 100
         return metrics_dict
 
